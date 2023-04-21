@@ -36,7 +36,7 @@ def save_skipped_row(row):
         writer = csv.writer(file)
         writer.writerow(row)
 
-# used for inspection if there are many urls 
+# used for inspection if there are many urls in dataset 
 def save_summary(row_num, row, status):
     with open('summary.csv', 'a', newline='') as file:
         writer = csv.writer(file)
