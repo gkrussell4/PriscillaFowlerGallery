@@ -36,6 +36,7 @@ def save_skipped_row(row):
         writer = csv.writer(file)
         writer.writerow(row)
 
+# used for clarity if there are many urls
 def save_summary(row_num, row, status):
     with open('summary.csv', 'a', newline='') as file:
         writer = csv.writer(file)
@@ -52,6 +53,7 @@ def main():
         for row_num, row in enumerate(reader, start=1):
             print(f"Processing row {row_num}: {row}")
 
+            # error handling 
             if len(row) != 3:
                 print(f"Skipping row {row_num} due to missing data")
                 save_skipped_row(row)
