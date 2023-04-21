@@ -1,72 +1,65 @@
+import time
 import csv
 import json
-import re
-from bs4 import BeautifulSoup
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.options import Options
-
+from bs4 import BeautifulSoup
 
 def extract_content(url):
+    driver = webdriver.Chrome()
     driver.get(url)
+    time.sleep(3)
+    html = driver.page_source
+    driver.quit()
+    soup = BeautifulSoup(html, 'html.parser')
+    script_tag = soup.find('script', {'type': 'application/ld+json'})
 
-    try:
-        # Wait for the presence of the meta tag with name="description"
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'meta[name="description"]')))
-
-        soup = BeautifulSoup(driver.page_source, 'html.parser')
-        content = soup.find('meta', {'name': 'description'})['content']
-        script_tag = soup.find('script', {'type': 'application/ld+json'})
-
-    except Exception as e:
-        print(f"Error while waiting for element: {e}")
-        return None
-
-    if content and script_tag:
+    if script_tag:
         json_data = json.loads(script_tag.string)
+        
+        context = json_data.get('@context', '')
+        _type = json_data.get('@type', '')
+        name = json_data.get('name', '')
+        image = json_data.get('image', '')
+        description = json_data.get('description', '')
+        url = json_data.get('url', '')
+        width = json_data.get('width', '')
+        height = json_data.get('height', '')
+        depth = json_data.get('depth', '')
+        brand = json_data.get('brand', {}).get('name', '')
+        category = json_data.get('category', '')
         production_date = json_data.get('productionDate', '')
         price = json_data.get('offers', {}).get('price', '')
+        price_currency = json_data.get('offers', {}).get('priceCurrency', '')
+        availability = json_data.get('offers', {}).get('availability', '')
 
-        match = re.match(r'(.*?), (.*?), (.*?)( \((\d{4})\))?, (.*?)(, )?(\d+(/| )?(1/)?\d? × \d+ in)', content)
-        if match:
-            return list(match.groups()[0:3]) + [match.groups()[4]] + list(match.groups()[5:7]) + [match.groups()[8]] + [production_date, price]
+        return [context, _type, name, image, description, url, width, height, depth, brand, category, production_date, price, price_currency, availability]
 
     return None
 
-chrome_options = Options()
-
-# Add arguments to simulate a regular user browser
-chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36")
-
-# Initialize the Chrome web driver with the added options
-driver = webdriver.Chrome(options=chrome_options)
-
-# Read the URLs from the "urls.csv" file
+urls_csv_filename = 'urls.csv'
 urls = []
-with open('urls.csv', mode='r', newline='', encoding='utf-8') as infile:
-    csv_reader = csv.reader(infile)
+
+with open(urls_csv_filename, mode='r', newline='', encoding='utf-8') as csvfile:
+    csv_reader = csv.reader(csvfile)
     for row in csv_reader:
-        urls.append(row[0])
+        if row:  # Check if the row is not empty
+            urls.append(row[0])  # assuming the URL is in the first column
 
-# Define the output and failed URLs CSV filenames
-output_csv_filename = 'output.csv'
-failed_csv_filename = 'failed_urls.csv'
 
-# Loop through the URLs and extract the content
+output_csv_filename = 'output2.csv'
+failed_urls_csv_filename = 'failed_urls.csv'
+
 for url in urls:
-    data = extract_content(url)
-    if data:
-        with open(output_csv_filename, mode='a', newline='', encoding='utf-8') as outfile:
-            csv_writer = csv.writer(outfile)
-            csv_writer.writerow(data)
+    content_pieces = extract_content(url)
+    if content_pieces:
+        with open(output_csv_filename, mode='a', newline='', encoding='utf-8') as csvfile:
+            csv_writer = csv.writer(csvfile)
+            csv_writer.writerow(content_pieces)
+        print(f"Content written to {output_csv_filename} for URL {url}:")
+        print(content_pieces)
     else:
-        print(f"No content found for URL {url}")
-        with open(failed_csv_filename, mode='a', newline='', encoding='utf-8') as outfile:
-            csv_writer = csv.writer(outfile)
+        with open(failed_urls_csv_filename, mode='a', newline='', encoding='utf-8') as csvfile:
+            csv_writer = csv.writer(csvfile)
             csv_writer.writerow([url])
-
-# Close the browser window
-driver.quit()
+        print(f"No content found for URL {url}; added to {failed_urls_csv_filename}")
+    time.sleep(2)
