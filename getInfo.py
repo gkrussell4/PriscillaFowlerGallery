@@ -45,8 +45,7 @@ with open(urls_csv_filename, mode='r', newline='', encoding='utf-8') as csvfile:
         if row:  # Check if the row is not empty
             urls.append(row[0])  # assuming the URL is in the first column
 
-
-output_csv_filename = 'output2.csv'
+output_csv_filename = 'output2.csv' #change if needed
 failed_urls_csv_filename = 'failed_urls.csv'
 
 for url in urls:
